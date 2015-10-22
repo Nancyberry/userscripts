@@ -10,8 +10,8 @@
 // ==/UserScript==
 /* global $:false */
 setInterval(function modifyDashboard() {
-    $("td[title='environment.hulu_app_version']").each(function (value) {
-        var $this = $(value);
+    $("td[title='environment.hulu_app_version']").each(function () {
+        var $this = $(this);
         var buildNum = $this.parents('tr').find('td:eq(1)').text();
         // console.log(buildNum);
         if (buildNum === null) {
