@@ -9,21 +9,26 @@
 // @grant        none
 // ==/UserScript==
 /* global $:false */
-setInterval(function modifyDashboard() {
+var success = setInterval(function retraceLog() {
     $("td[title='environment.hulu_app_version']").each(function () {
         var $this = $(this);
         var buildNum = $this.parents('tr').find('td:eq(1)').text();
-        // console.log(buildNum);
         if (buildNum === null) {
             return;
         }
 
         var stacktraceNode = $this.parents('tbody').find("td[title='error.stack_trace']")
             .parents('tr').find('td:eq(1)');
-        // console.log(stacktraceNode.text());
+        var rawLog = stacktraceNode.text();
+        if (rawLog === null) {
+            return;
+        }
 
-        var data = {raw_log: stacktraceNode.text(), version: buildNum.trim().substr(-4, 4)};
+        var data = {raw_log: rawLog, version: buildNum.trim().substr(-4, 4)};
         console.log(data);
+
+        // show "retracing..." when it starts
+        stacktraceNode.html("Retracing...");
 
         $.ajax({
             type: 'POST',
@@ -31,16 +36,24 @@ setInterval(function modifyDashboard() {
             data: data,
             success: function(response) {
                 if(response['success']) {
-                    // replace raw log with retraced one
                     console.log(response['data']);
-                    stacktraceNode.html(response['data'].replace("\n", "<br/>&nbsp;&nbsp;"));
+                    // replace raw log with retraced one
+                    stacktraceNode.html(formateLog(response['data']));
                 } else {
-                    alert("Retracing failed.")
+                    alert("Retracing failed. Please check your params.")
+                    stacktraceNode.html(formateLog(rawLog));
                 }
             },
             dataType: 'json'
         }).fail(function() {
             alert("There was system error in manny. Please check its error log.");
+            stacktraceNode.html(formateLog(rawLog));
         });
+
+        clearInterval(success);
     });
 }, 1000);
+
+function formateLog(log) {
+    return log.trim().replace(/\n/g, "<br/>&nbsp;&nbsp;&nbsp;&nbsp;");
+}
