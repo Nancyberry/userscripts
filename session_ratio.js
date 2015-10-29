@@ -9,12 +9,14 @@
 // @grant        none
 // ==/UserScript==
 /* global $:false */
+// $(document).ready(modifyDashboard());
 
-var success = setInterval(function modifyDashboard() {
+var timePeriodLoaded = setInterval(function requestSessionCount() {
     'use strict';
     // Currently we only calculate the session ratio for the last 24 hours
-    var duration = $("pretty-duration").text();
+    var duration = $("pretty-duration").text().trim();
     console.log("duration: " + duration);
+
     if (duration.indexOf("Last 24 hours") === -1) {
         return;
     }
@@ -101,6 +103,9 @@ var success = setInterval(function modifyDashboard() {
        }
     };
 
+    var flag1 = false;
+    var flag2 = false;
+
     $.ajax({
         type: 'POST',
         url: "http://glyph.prod.hulu.com/api/v1/query",
@@ -110,8 +115,11 @@ var success = setInterval(function modifyDashboard() {
         success: function(response) {
             var playbackSessionCount = response[0]['split'][0]['count'];
             console.log("playback last day session count: " + playbackSessionCount);
-            displayRatio("total-playback-session-count", playbackSessionCount);
+            flag1 = modifyDashboard("total-playback-session-count", playbackSessionCount);
+            console.log("flag1 is " + flag1);
         }
+    }).fail(function() {
+        alert("There was system error in glyph. Please check its error log.");
     });
 
     $.ajax({
@@ -123,10 +131,12 @@ var success = setInterval(function modifyDashboard() {
         success: function(response) {
             var revenueSessionCount = response[0]['split'][0]['count'];
             console.log("revenue last day session count: " + revenueSessionCount);
-            displayRatio("total-ad-session-count", revenueSessionCount);
+            flag2 = modifyDashboard("total-ad-session-count", revenueSessionCount);
+            console.log("flag2 is " + flag2);
         }
     });
 
+    clearInterval(timePeriodLoaded);
 }, 1000);
 
 /**
@@ -142,35 +152,45 @@ function parseIntWithComma(str) {
 /**
 * Append ratio after the original count
  */
-function displayRatio(divideByTitle, divideByValue) {
-    // check duration again
-    var duration = $("pretty-duration").text();
-    console.log("duration: " + duration);
-    if (duration.indexOf("Last 24 hours") === -1) {
-        return;
-    }
-
-    $('.panel-title').each(function (index, panelTitle) {
-        var $panelTitle = $(panelTitle);
-        // if ($panelTitle.text().trim().toUpperCase() !== chartTitle.toUpperCase()) {
-        //   return;
-        // }
-
-        // Deal with charts with title of which contains divideByTitle
-        if ($panelTitle.text().trim().indexOf(divideByTitle) === -1) {
-            return;
+function modifyDashboard(divideByTitle, divideByValue) {
+    setInterval(function() {
+        // check duration again
+        var duration = $("pretty-duration").text();
+        console.log("duration: " + duration);
+        if (duration.indexOf("Last 24 hours") === -1) {
+            return false;
         }
 
-        // console.log("result is: " + result);
-        var $valueNode = $panelTitle.closest('.panel').find('.metric-value');
-        var value = $valueNode.text();
-        if (value.indexOf('/') !== -1) {
-          // already calculated
-          return;
-        }
-        value = parseIntWithComma(value);
-        console.log("The ratio should be " + value + " divide by " + divideByValue);
-        var ratio = value / divideByValue;
-        $valueNode.append(' / ' + Math.round(ratio * 10000) / 100 + "%");
-      });
+        $('.panel-title').each(function displayRatio(index, panelTitle) {
+            var $panelTitle = $(panelTitle);
+            // if ($panelTitle.text().trim().toUpperCase() !== chartTitle.toUpperCase()) {
+            //   return;
+            // }
+
+            // Deal with charts with title of which contains divideByTitle
+            if ($panelTitle.text().trim().indexOf(divideByTitle) === -1) {
+                return;
+            }
+
+            // console.log("result is: " + result);
+            var $valueNode = $panelTitle.closest('.panel').find('.metric-value');
+            var value = $valueNode.text();
+            if (!value || value.indexOf('(') !== -1) {
+            // if value has not been loaded yet or already calculated
+                return;
+            }
+            console.log("value node: " + value);
+            // if (value.indexOf('(') !== -1) {
+            //   // already calculated
+            //   return;
+            // }
+            value = parseIntWithComma(value);
+            console.log("The ratio should be " + value + " divide by " + divideByValue);
+            var ratio = value / divideByValue;
+            $valueNode.append(' (' + Math.round(ratio * 10000) / 100 + "%)");
+        });
+
+    }, 1000);
+
+    return true;
 }
