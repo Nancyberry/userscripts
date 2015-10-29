@@ -110,7 +110,7 @@ var success = setInterval(function modifyDashboard() {
         success: function(response) {
             var playbackSessionCount = response[0]['split'][0]['count'];
             console.log("playback last day session count: " + playbackSessionCount);
-            displayRatio("Dead Content Playback sessions", playbackSessionCount);
+            displayRatio("total-playback-session-count", playbackSessionCount);
         }
     });
 
@@ -123,7 +123,7 @@ var success = setInterval(function modifyDashboard() {
         success: function(response) {
             var revenueSessionCount = response[0]['split'][0]['count'];
             console.log("revenue last day session count: " + revenueSessionCount);
-            displayRatio("Dead AD Playback sessions", revenueSessionCount);
+            displayRatio("total-ad-session-count", revenueSessionCount);
         }
     });
 
@@ -142,7 +142,8 @@ function parseIntWithComma(str) {
 /**
 * Append ratio after the original count
  */
-function displayRatio(chartTitle, divideByValue) {
+function displayRatio(divideByTitle, divideByValue) {
+    // check duration again
     var duration = $("pretty-duration").text();
     console.log("duration: " + duration);
     if (duration.indexOf("Last 24 hours") === -1) {
@@ -151,8 +152,13 @@ function displayRatio(chartTitle, divideByValue) {
 
     $('.panel-title').each(function (index, panelTitle) {
         var $panelTitle = $(panelTitle);
-        if ($panelTitle.text().trim().toUpperCase() !== chartTitle.toUpperCase()) {
-          return;
+        // if ($panelTitle.text().trim().toUpperCase() !== chartTitle.toUpperCase()) {
+        //   return;
+        // }
+
+        // Deal with charts with title of which contains divideByTitle
+        if ($panelTitle.text().trim().indexOf(divideByTitle) === -1) {
+            return;
         }
 
         // console.log("result is: " + result);
